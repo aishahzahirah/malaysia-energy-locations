@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Malaysia Energy Locations</title>
+<style>
+  :root {
+    --bg: #f7f9fc;
+    --panel: #ffffff;
+    --panel2: #eef2f7;
+    --border: #d3dbe4;
+    --text: #1a2530;
+    --muted: #5b6b7c;
+    --accent: #1565d8;
+    --accent-dim: rgba(21, 101, 216, 0.09);
+    --amber: #e8710a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+  header h1 {
+    font-size: 20px;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+  header span { color: var(--muted); font-size: 12px; }
+  section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--amber);
+    margin-bottom: 12px;
+  }
+  /* Quick filter */
+  .filters {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .filters label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  input, select {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 13px;
+    min-width: 200px;
+  }
+  input:focus, select:focus {
+    outline: 1px solid var(--accent);
+    border-color: var(--accent);
+  }
+  button {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    align-self: flex-end;
+  }
+  button:hover { background: rgba(21, 101, 216, 0.2); }
+  /* List */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr {
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: var(--panel2); }
+  tbody tr.selected {
+    background: var(--accent-dim);
+    border-left: 3px solid var(--accent);
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .tag.oil-gas { color: #c62828; border-color: rgba(198,40,40,.4); }
+  .tag.renewable { color: #2e7d32; border-color: rgba(46,125,50,.4); }
+  .tag.utility { color: var(--amber); border-color: rgba(232,113,10,.4); }
+  .tag.data-center { color: var(--accent); border-color: rgba(21,101,216,.4); }
+  .count { color: var(--muted); font-size: 11px; margin-top: 8px; }
+  .empty {
+    color: var(--muted);
+    padding: 16px 10px;
+    font-size: 13px;
+  }
+  /* Details */
+  .details-grid {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 10px 16px;
+    font-size: 13px;
+  }
+  .details-grid dt { color: var(--muted); }
+  .details-grid dd { color: var(--text); }
+  .details-name { font-size: 16px; color: var(--accent); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>MALAYSIA ENERGY LOCATIONS</h1>
+    <span>18 fictional sample entries + 14 real-company reference entries (city/state only, no live data &mdash; real names appear without an address)</span>
+  </header>
+
+  <!-- 3. Quick filter -->
+  <section id="filter-section">
+    <h2>Quick Filter</h2>
+    <div class="filters">
+      <label>Search state
+        <input id="search" type="text" placeholder="e.g. Sarawak">
+      </label>
+      <label>Company type
+        <select id="type-filter">
+          <option value="">All types</option>
+          <option value="Oil & Gas">Oil &amp; Gas</option>
+          <option value="Renewable">Renewable</option>
+          <option value="Utility">Utility</option>
+          <option value="Data Center">Data Center</option>
+        </select>
+      </label>
+      <button id="clear-btn" type="button">Clear filters</button>
+    </div>
+  </section>
+
+  <!-- 1. Location list -->
+  <section id="list-section">
+    <h2>Location List</h2>
+    <table>
+      <thead>
+        <tr><th>Company</th><th>City</th><th>State</th><th>Type</th></tr>
+      </thead>
+      <tbody id="list-body"></tbody>
+    </table>
+    <p class="empty" id="empty-msg" hidden>No locations match the current filters.</p>
+    <p class="count" id="count"></p>
+  </section>
+
+  <!-- 2. Location details -->
+  <section id="details-section">
+    <h2>Location Details</h2>
+    <div id="details-content">
+      <p class="empty">Click a location in the list above to inspect it.</p>
+    </div>
+  </section>
+
+  <!-- 4. Location map -->
+  <section id="map-section">
+    <h2>Location Map</h2>
+    <iframe id="map-frame" title="Location map" width="100%" height="300" style="border:1px solid var(--border); border-radius:4px; display:block;"></iframe>
+    <p class="count" style="display:flex; justify-content:space-between; align-items:center;">
+      <span id="map-caption">No location selected &mdash; showing Malaysia overview.</span>
+      <a id="map-link" href="https://www.google.com/maps/place/Malaysia" target="_blank" rel="noopener" style="color:var(--accent);">Open in Google Maps &#8599;</a>
+    </p>
+  </section>
+
+<script>
+  // Sample data — illustrative only
+  const locations = [
+    {
+      id: 1,
+      company: "Borneo Solar Ventures",
+      city: "Kuching",
+      state: "Sarawak",
+      type: "Renewable",
+      address: "Lot 42, Jalan Rock, 93200 Kuching, Sarawak (sample)",
+      desc: "A solar panel assembly and rooftop installation hub serving western Sarawak. Operates a small warehouse and a design office in the city centre."
+    },
+    {
+      id: 2,
+      company: "Tanjung Offshore Services",
+      city: "Kemaman",
+      state: "Terengganu",
+      type: "Oil & Gas",
+      address: "Plot 7, Kemaman Supply Base, 24000 Kemaman, Terengganu (sample)",
+      desc: "Provides vessel support and maintenance workshops near the east-coast supply base corridor. Handles logistics for offshore rigs in the South China Sea."
+    },
+    {
+      id: 3,
+      company: "Kinabalu Grid Works",
+      city: "Kota Kinabalu",
+      state: "Sabah",
+      type: "Utility",
+      address: "Block C, Kota Kinabalu Industrial Park, 88450 Kota Kinabalu, Sabah (sample)",
+      desc: "A transmission and substation maintenance depot covering the west coast of Sabah. Coordinates line crews and spare transformer storage."
+    },
+    {
+      id: 4,
+      company: "Langkawi Wind Pilot",
+      city: "Kuah",
+      state: "Kedah",
+      type: "Renewable",
+      address: "No. 15, Jalan Persiaran Putra, 07000 Kuah, Langkawi, Kedah (sample)",
+      desc: "A small coastal monitoring station studying wind feasibility for the northern islands. Runs an instrument lab and a visitor briefing room."
+    },
+    {
+      id: 5,
+      company: "Petra Fuels Malaysia",
+      city: "Shah Alam",
+      state: "Selangor",
+      type: "Oil & Gas",
+      address: "Suite 9-2, Jalan Helium 5/7, Seksyen 5, 40000 Shah Alam, Selangor (sample)",
+      desc: "Head office for fuel distribution planning across the Klang Valley. Houses a trading desk and a fleet dispatch centre."
+    },
+    {
+      id: 6,
+      company: "Perak Hydro Collective",
+      city: "Ipoh",
+      state: "Perak",
+      type: "Renewable",
+      address: "No. 88, Jalan Sultan Idris Shah, 30000 Ipoh, Perak (sample)",
+      desc: "Coordinates small run-of-river hydro schemes in the Kinta valley. Maintains turbine service crews and a parts depot."
+    },
+    {
+      id: 7,
+      company: "Melaka Power Nodes",
+      city: "Melaka City",
+      state: "Melaka",
+      type: "Utility",
+      address: "Lot 3, Jalan Tun Sri Lanang, 75100 Melaka City, Melaka (sample)",
+      desc: "A grid control and metering support office serving the southern peninsula. Manages local substation inspection schedules."
+    },
+    {
+      id: 8,
+      company: "Genting Highlands Microgrid",
+      city: "Genting Highlands",
+      state: "Pahang",
+      type: "Utility",
+      address: "Station 2, Genting Highlands Resort Belt, 69000 Genting Highlands, Pahang (sample)",
+      desc: "A hillside backup power and microgrid test station. Coordinates battery storage trials and cable car line power feeds."
+    },
+    {
+      id: 9,
+      company: "Sarawak Hydro Advance",
+      city: "Miri",
+      state: "Sarawak",
+      type: "Renewable",
+      address: "Lot 21, Jalan Boulevard 2, 98000 Miri, Sarawak (sample)",
+      desc: "A planning office for large hydro and bioenergy projects in northern Sarawak. Hosts survey teams and a community liaison desk."
+    },
+    {
+      id: 10,
+      company: "Penang Marine Energy Lab",
+      city: "George Town",
+      state: "Penang",
+      type: "Renewable",
+      address: "Level 4, Bayan Lepas Tech Park, 11900 Bayan Lepas, Penang (sample)",
+      desc: "A research lab exploring tidal and wave energy prototypes for coastal deployment. Runs a small test rig pool and data analysis room."
+    },
+    {
+      id: 11,
+      company: "Kelantan Fuel Logistics",
+      city: "Kota Bharu",
+      state: "Kelantan",
+      type: "Oil & Gas",
+      address: "No. 6, Jalan Hamzah, 15000 Kota Bharu, Kelantan (sample)",
+      desc: "A fuel distribution depot managing road tanker schedules across the east-coast interior. Keeps a driver training yard on site."
+    },
+    {
+      id: 12,
+      company: "Johor Refinery Support Co.",
+      city: "Johor Bahru",
+      state: "Johor",
+      type: "Oil & Gas",
+      address: "Tower B, Pasir Gudang Corporate Park, 81700 Pasir Gudang, Johor (sample)",
+      desc: "An engineering services office supporting refinery turnaround projects in the southern corridor. Provides inspection crews and parts sourcing."
+    },
+    {
+      id: 13,
+      company: "Putrajaya Grid Analytics",
+      city: "Putrajaya",
+      state: "Putrajaya",
+      type: "Utility",
+      address: "Precinct 2, Federal Government Office Complex, 62000 Putrajaya (sample)",
+      desc: "A data office tracking load patterns and outage reports across federal facilities. Feeds dashboards used by regional depot teams."
+    },
+    {
+      id: 14,
+      company: "Kampar Biofuel Works",
+      city: "Kampar",
+      state: "Perak",
+      type: "Renewable",
+      address: "Lot 12, Kampar Industrial Estate, 31900 Kampar, Perak (sample)",
+      desc: "A small biofuel processing site turning local agricultural waste into fuel pellets. Runs a pilot reactor and a storage shed."
+    },
+    {
+      id: 15,
+      company: "Labuan Offshore Supply",
+      city: "Labuan",
+      state: "Labuan",
+      type: "Oil & Gas",
+      address: "Berth 5, Labuan Harbour Complex, 87000 Labuan (sample)",
+      desc: "A marine supply and crew-transfer base for offshore platforms in nearby waters. Maintains a warehouse and bunkering coordination desk."
+    },
+    {
+      id: 16,
+      company: "Cyberjaya Cloud Campus",
+      city: "Cyberjaya",
+      state: "Selangor",
+      type: "Data Center",
+      address: "Jalan Teknokrat 4, Cyber 4, 63000 Cyberjaya, Selangor (sample)",
+      desc: "A carrier-neutral data centre campus with multiple server halls. Houses colocation racks, meet-me rooms and an on-site network operations desk."
+    },
+    {
+      id: 17,
+      company: "Nusajaya Edge Facility",
+      city: "Iskandar Puteri",
+      state: "Johor",
+      type: "Data Center",
+      address: "Plot 9, Medini Tech Zone, 79200 Iskandar Puteri, Johor (sample)",
+      desc: "An edge computing facility serving southern Malaysia and Singapore link traffic. Runs compact server pods with dedicated backup generation."
+    },
+    {
+      id: 18,
+      company: "Tunku Data Vault",
+      city: "Kuala Lumpur",
+      state: "Kuala Lumpur",
+      type: "Data Center",
+      address: "Level 2, Jalan Ampang Tech Tower, 50450 Kuala Lumpur (sample)",
+      desc: "A downtown vault-style data centre for financial and enterprise clients. Provides secure suites, fibre entries and a 24-hour monitoring room."
+    },
+    {
+      id: 19,
+      company: "Petronas",
+      city: "Kuala Lumpur",
+      state: "Kuala Lumpur",
+      type: "Oil & Gas",
+      address: "Head offices around KLCC, Kuala Lumpur (public reference, not an exact address)",
+      desc: "Malaysia's national oil and gas corporation, involved in upstream exploration, gas processing, refining and retail fuel through Petronas Dagangan."
+    },
+    {
+      id: 20,
+      company: "Tenaga Nasional Berhad",
+      city: "Kuala Lumpur",
+      state: "Kuala Lumpur",
+      type: "Utility",
+      address: "Head offices in the Klang Valley (public reference, not an exact address)",
+      desc: "The main electricity utility serving Peninsular Malaysia — generation, transmission and distribution."
+    },
+    {
+      id: 21,
+      company: "Sarawak Energy Berhad",
+      city: "Kuching",
+      state: "Sarawak",
+      type: "Utility",
+      address: "Kuching, Sarawak (public reference, not an exact address)",
+      desc: "The power utility and grid operator for Sarawak, with a large hydro generation portfolio including the Bakun Dam."
+    },
+    {
+      id: 22,
+      company: "Sabah Electricity Sdn Bhd",
+      city: "Kota Kinabalu",
+      state: "Sabah",
+      type: "Utility",
+      address: "Kota Kinabalu, Sabah (public reference, not an exact address)",
+      desc: "The electricity utility serving Sabah, majority-owned by Tenaga Nasional Berhad."
+    },
+    {
+      id: 23,
+      company: "Malakoff Corporation Berhad",
+      city: "Kuala Lumpur",
+      state: "Kuala Lumpur",
+      type: "Utility",
+      address: "Klang Valley head office (public reference, not an exact address)",
+      desc: "One of Malaysia's largest independent power producers, best known for the Tanjung Bin power plants in Johor."
+    },
+    {
+      id: 24,
+      company: "YTL Power International",
+      city: "Kuala Lumpur",
+      state: "Kuala Lumpur",
+      type: "Utility",
+      address: "Klang Valley head office (public reference, not an exact address)",
+      desc: "The power generation and utilities arm of the YTL Group, active in generation, retail power and data-centre energy."
+    },
+    {
+      id: 25,
+      company: "Sapura Energy Berhad",
+      city: "Shah Alam",
+      state: "Selangor",
+      type: "Oil & Gas",
+      address: "Shah Alam, Selangor (public reference, not an exact address)",
+      desc: "A major oil and gas services contractor for offshore drilling, engineering and construction."
+    },
+    {
+      id: 26,
+      company: "Dialog Group Berhad",
+      city: "Petaling Jaya",
+      state: "Selangor",
+      type: "Oil & Gas",
+      address: "Petaling Jaya, Selangor (public reference, not an exact address)",
+      desc: "An oil and gas services group known for tank terminals, plant maintenance and the Pengerang independent petroleum terminal in Johor."
+    },
+    {
+      id: 27,
+      company: "Hibiscus Petroleum",
+      city: "Kuala Lumpur",
+      state: "Kuala Lumpur",
+      type: "Oil & Gas",
+      address: "Klang Valley head office (public reference, not an exact address)",
+      desc: "Malaysia's first listed independent upstream oil and gas exploration and production company."
+    },
+    {
+      id: 28,
+      company: "Solarvest Holdings Berhad",
+      city: "Petaling Jaya",
+      state: "Selangor",
+      type: "Renewable",
+      address: "Petaling Jaya, Selangor (public reference, not an exact address)",
+      desc: "A leading solar engineering, procurement and construction contractor for rooftop and utility-scale solar projects."
+    },
+    {
+      id: 29,
+      company: "Plus Solar Systems",
+      city: "Shah Alam",
+      state: "Selangor",
+      type: "Renewable",
+      address: "Shah Alam, Selangor (public reference, not an exact address)",
+      desc: "One of Malaysia's largest commercial and industrial rooftop solar installers, with an operations arm for asset maintenance."
+    },
+    {
+      id: 30,
+      company: "Cypark Resources Berhad",
+      city: "Puchong",
+      state: "Selangor",
+      type: "Renewable",
+      address: "Puchong, Selangor (public reference, not an exact address)",
+      desc: "A renewable energy developer with solar farms and waste-to-energy projects, originally grown from environmental engineering work."
+    },
+    {
+      id: 31,
+      company: "AirTrunk JHB1",
+      city: "Cyberjaya",
+      state: "Selangor",
+      type: "Data Center",
+      address: "Cyberjaya, Selangor (public reference, not an exact address)",
+      desc: "A large hyperscale data centre campus operator active in Cyberjaya and Johor, serving cloud and enterprise workloads."
+    },
+    {
+      id: 32,
+      company: "YTL Green Data Center, Kulai",
+      city: "Kulai",
+      state: "Johor",
+      type: "Data Center",
+      address: "Kulai, Johor (public reference, not an exact address)",
+      desc: "A hyperscale green data centre campus in Johor developed by the YTL Group, positioned for regional cloud capacity."
+    }
+  ];
+
+  const listBody = document.getElementById("list-body");
+  const emptyMsg = document.getElementById("empty-msg");
+  const countEl = document.getElementById("count");
+  const searchInput = document.getElementById("search");
+  const typeFilter = document.getElementById("type-filter");
+  const clearBtn = document.getElementById("clear-btn");
+  const detailsContent = document.getElementById("details-content");
+
+  let selectedId = null;
+
+  // City-level coordinates for the map section (approximate city-centre pins, not exact addresses)
+  const cityCoords = {
+    "Kuching": [1.5533, 110.3592],
+    "Kemaman": [4.2333, 103.4167],
+    "Kota Kinabalu": [5.9804, 116.0735],
+    "Kuah": [6.3167, 99.8500],
+    "Shah Alam": [3.0733, 101.5183],
+    "Ipoh": [4.5975, 101.0901],
+    "Melaka City": [2.1896, 102.2501],
+    "Genting Highlands": [3.4236, 101.7931],
+    "Miri": [4.3994, 113.9117],
+    "George Town": [5.4141, 100.3288],
+    "Kota Bharu": [6.1333, 102.2386],
+    "Johor Bahru": [1.4927, 103.7467],
+    "Putrajaya": [2.9350, 101.6917],
+    "Kampar": [4.3167, 101.1333],
+    "Labuan": [5.2833, 115.2333],
+    "Cyberjaya": [2.9868, 101.6572],
+    "Iskandar Puteri": [1.4606, 103.6300],
+    "Kuala Lumpur": [3.1390, 101.6869],
+    "Kulai": [1.6572, 103.6078],
+    "Petaling Jaya": [3.1073, 101.6067],
+    "Puchong": [3.0306, 101.6200]
+  };
+
+  const mapFrame = document.getElementById("map-frame");
+  const mapCaption = document.getElementById("map-caption");
+  const mapLink = document.getElementById("map-link");
+
+  function updateMap(loc) {
+    if (loc && cityCoords[loc.city]) {
+      const [lat, lon] = cityCoords[loc.city];
+      const d = 0.08; // zoom-out padding around the city pin
+      const bbox = `${lon - d},${lat - d},${lon + d},${lat + d}`;
+      mapFrame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
+      mapCaption.textContent = `Approximate city-centre map for ${loc.city}, ${loc.state} — pin marks the city, not an exact address.`;
+      mapLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc.city + ", " + loc.state)}`;
+    } else {
+      mapFrame.src = "https://www.openstreetmap.org/export/embed.html?bbox=99.5,1.0,104.5,6.5&layer=mapnik";
+      mapCaption.textContent = "No location selected — showing Malaysia overview.";
+      mapLink.href = "https://www.google.com/maps/place/Malaysia";
+    }
+  }
+
+  function render() {
+    const q = searchInput.value.trim().toLowerCase();
+    const type = typeFilter.value;
+    const filtered = locations.filter(loc => {
+      const matchesState = q === "" || loc.state.toLowerCase().includes(q);
+      const matchesType = type === "" || loc.type === type;
+      return matchesState && matchesType;
+    });
+
+    listBody.innerHTML = "";
+    filtered.forEach(loc => {
+      const tr = document.createElement("tr");
+      tr.dataset.id = loc.id;
+      if (loc.id === selectedId) tr.classList.add("selected");
+      tr.innerHTML = `
+        <td>${loc.company}</td>
+        <td>${loc.city}</td>
+        <td>${loc.state}</td>
+        <td><span class="tag ${loc.type.toLowerCase().replace(/[^a-z]+/g, "-")}">${loc.type}</span></td>`;
+      tr.addEventListener("click", () => selectLocation(loc.id));
+      listBody.appendChild(tr);
+    });
+
+    emptyMsg.hidden = filtered.length > 0;
+    countEl.textContent = `${filtered.length} of ${locations.length} locations shown`;
+
+    // If selected location filtered out, keep details but note it
+    if (selectedId && !filtered.some(l => l.id === selectedId)) {
+      const loc = locations.find(l => l.id === selectedId);
+      renderDetails(loc);
+    }
+    // keep the map showing Malaysia overview if the selection was cleared
+    if (!selectedId) updateMap(null);
+  }
+
+  function renderDetails(loc) {
+    detailsContent.innerHTML = `
+      <div class="details-grid">
+        <dt>Company</dt><dd class="details-name">${loc.company}</dd>
+        <dt>Address</dt><dd>${loc.address}</dd>
+        <dt>City</dt><dd>${loc.city}</dd>
+        <dt>State</dt><dd>${loc.state}</dd>
+        <dt>Type</dt><dd><span class="tag ${loc.type.toLowerCase().replace(/[^a-z]+/g, "-")}">${loc.type}</span></dd>
+        <dt>Description</dt><dd>${loc.desc}</dd>
+      </div>`;
+  }
+
+  function selectLocation(id) {
+    selectedId = id;
+    const loc = locations.find(l => l.id === id);
+    renderDetails(loc);
+    updateMap(loc);
+    render(); // refresh row highlight
+  }
+
+  searchInput.addEventListener("input", render);
+  typeFilter.addEventListener("change", render);
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    typeFilter.value = "";
+    render();
+  });
+
+  // Initial render — show all sample entries on load
+  render();
+  updateMap(null);
+</script>
+</body>
+</html>
